@@ -2,7 +2,7 @@
 <Configuration status="info" strict="true" name="XMLConfigTest"
                packages="org.apache.logging.log4j.test">
     <Properties>
-        <Property name="LOG_FILE">${BUILD_FOLDER:-build}/${service_name}</Property>
+        <Property name="LOG_FILE">./logger</Property>
     </Properties>
     <Appenders>
         <Console name="ConsoleAppender" target="SYSTEM_OUT">
