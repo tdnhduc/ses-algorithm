@@ -1,1 +1,5 @@
+com/hcmus/fit/network/distributedsystem/PublishMessage.class
+com/hcmus/fit/network/distributedsystem/utils/HandleConfig.class
+com/hcmus/fit/network/distributedsystem/utils/FormatKeyWorker.class
+com/hcmus/fit/network/distributedsystem/utils/Message.class
 com/hcmus/fit/network/distributedsystem/Runner.class
