@@ -11,6 +11,7 @@
 
     <modules>
         <module>ses</module>
+        <module>client-test</module>
     </modules>
 
     <properties>

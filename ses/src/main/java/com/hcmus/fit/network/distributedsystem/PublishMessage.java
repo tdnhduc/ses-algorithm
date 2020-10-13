@@ -1,6 +1,7 @@
 package com.hcmus.fit.network.distributedsystem;
 
 import com.hcmus.fit.network.distributedsystem.utils.Message;
+import com.hcmus.fit.network.distributedsystem.utils.SocketHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,18 +16,18 @@ import java.net.Socket;
  */
 public class PublishMessage implements Runnable{
     private static final Logger LOGGER = LoggerFactory.getLogger(PublishMessage.class);
-    protected Socket clientSocket = null;
+    protected SocketHandler socketHandler;
     protected  String processID = null;
-    public PublishMessage(Socket clientSocket, String processID){
-        this.clientSocket = clientSocket;
+    public PublishMessage(SocketHandler clientSocket, String processID){
+        this.socketHandler = clientSocket;
         this.processID = processID;
     }
 
     @Override
     public void run() {
         try {
-            InputStream inputStream = clientSocket.getInputStream();
-            OutputStream outputStream = clientSocket.getOutputStream();
+            InputStream inputStream = socketHandler.getSocket().getInputStream();
+            OutputStream outputStream = socketHandler.getSocket().getOutputStream();
             long time = System.currentTimeMillis();
             Message message = new Message("HTTP/1.1 200 OK\n\nWorkerRunnable: " +
                     this.processID + " - " +
@@ -41,10 +42,10 @@ public class PublishMessage implements Runnable{
         }
     }
     public InetAddress getIP(){
-        return this.clientSocket.getLocalAddress();
+        return this.socketHandler.getSocket().getLocalAddress();
     }
 
     public int getPort() {
-        return this.clientSocket.getPort();
+        return this.socketHandler.getSocket().getPort();
     }
 }

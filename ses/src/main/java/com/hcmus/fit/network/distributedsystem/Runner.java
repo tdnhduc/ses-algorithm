@@ -2,7 +2,7 @@ package com.hcmus.fit.network.distributedsystem;
 
 import com.hcmus.fit.network.distributedsystem.utils.FormatKeyWorker;
 import com.hcmus.fit.network.distributedsystem.utils.HandleConfig;
-import com.sun.corba.se.spi.orbutil.threadpool.Work;
+import com.hcmus.fit.network.distributedsystem.utils.SocketHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,7 +21,6 @@ public class Runner {
      * eg: 127.0.0.1:8080 <-> worker1
      */
     public static Map<String, PublishMessage> workerMap = new HashMap<>();
-    public static ExecutorService executor = Executors.newSingleThreadExecutor();
 
     public static void main(String args[]) throws IOException {
         Properties props = HandleConfig.getInstance().getProperties();
@@ -31,9 +30,14 @@ public class Runner {
         if(serverSocket != null){
             LOGGER.info("Server started");
             while(true){
-                PublishMessage publishMessage = new PublishMessage(serverSocket.accept(), processID);
+                SocketHandler socketHandler = new SocketHandler(serverSocket.accept());
+                LOGGER.info("Some client connected, hihihi");
+                PublishMessage publishMessage = new PublishMessage(socketHandler, processID);
+                HandleMessage handleMessage = new HandleMessage(socketHandler);
                 String key = FormatKeyWorker.formatKey(publishMessage.getIP(), publishMessage.getPort());
                 workerMap.putIfAbsent(key, publishMessage);
+                Thread t = new Thread(handleMessage);
+                t.start();
             }
         } else{
             LOGGER.error("Server is not started, oops crash");
