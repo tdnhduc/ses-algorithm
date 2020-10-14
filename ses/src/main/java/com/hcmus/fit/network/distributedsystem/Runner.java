@@ -9,10 +9,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class Runner {
     private static final Logger LOGGER = LoggerFactory.getLogger(Runner.class);
@@ -20,33 +18,41 @@ public class Runner {
      * workerMap for mapping ip:port with worker
      * eg: 127.0.0.1:8080 <-> worker1
      */
-    public static Map<String, PublishMessage> workerMap = new HashMap<>();
+    public static Map<String, PublishMessage> publishMessageMap = new HashMap<>();
+    public static Map<String, HandleMessage>  handleMessageMap = new HashMap<>();
 
     public static void main(String args[]) throws IOException {
-        Properties props = HandleConfig.getInstance().getProperties();
-        String port = props.getProperty("port");
-        String processID = props.getProperty("process_id");
-        ServerSocket serverSocket = new ServerSocket(Integer.valueOf(port));
+        int port = HandleConfig.getInstance().getHostPort();
+        String processID = HandleConfig.getInstance().getProcessID();
+        int minConnections = HandleConfig.getInstance().getMinConnections();
+        List<String> processes = HandleConfig.getInstance().getListPort();
+
+        ServerSocket serverSocket = new ServerSocket(port);
+
         if(serverSocket != null){
-            LOGGER.info("Server started");
+            LOGGER.info("Server id = {} started at port: {}", processID, port);
+            PublishMessage publishMessage = new PublishMessage(processID, processes, minConnections);
+            Thread publish = new Thread(publishMessage);
+            publish.start();
+
             while(true){
                 SocketHandler socketHandler = new SocketHandler(serverSocket.accept());
-                LOGGER.info("Some client connected, hihihi");
-                PublishMessage publishMessage = new PublishMessage(socketHandler, processID);
+                String hostClient = socketHandler.getSocket().getInetAddress().getHostAddress();
+                int portClient = socketHandler.getSocket().getPort();
+
+                LOGGER.info("Client {}:{} connected, :grinning::grinning::grinning:", hostClient, portClient);
+
                 HandleMessage handleMessage = new HandleMessage(socketHandler);
-                String key = FormatKeyWorker.formatKey(publishMessage.getIP(), publishMessage.getPort());
-                workerMap.putIfAbsent(key, publishMessage);
-                Thread t = new Thread(handleMessage);
-                t.start();
+
+                String key = FormatKeyWorker.formatKey(handleMessage.getHostName(), handleMessage.getHostPort());
+
+                handleMessageMap.putIfAbsent(key, handleMessage);
+
+                Thread handle = new Thread(handleMessage);
+                handle.start();
             }
         } else{
             LOGGER.error("Server is not started, oops crash");
-        }
-    }
-
-    private void publishMessage(){
-        for(Map.Entry<String, PublishMessage> entry : workerMap.entrySet()){
-
         }
     }
 }

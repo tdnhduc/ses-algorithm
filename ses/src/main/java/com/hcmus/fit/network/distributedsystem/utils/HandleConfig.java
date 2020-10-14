@@ -5,12 +5,16 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 public class HandleConfig {
     private static HandleConfig instance;
     private static Logger LOGGER = LoggerFactory.getLogger(HandleConfig.class);
     private Properties properties;
+
     private HandleConfig(){
         properties = loadConfig("application.properties");
     }
@@ -51,7 +55,17 @@ public class HandleConfig {
     public static HandleConfig getInstance() {
         return instance;
     }
-    public Properties getProperties(){
-        return this.properties;
+    public String  getProcessID(){
+        return this.properties.getProperty("process_id");
+    }
+    public int getHostPort(){
+        return Integer.valueOf(this.properties.getProperty("port"));
+    }
+
+    public int getMinConnections(){
+        return Integer.valueOf(this.properties.getProperty("min_connections"));
+    }
+    public List<String> getListPort(){
+        return Arrays.asList(this.properties.getProperty("list_host_port").split(","));
     }
 }

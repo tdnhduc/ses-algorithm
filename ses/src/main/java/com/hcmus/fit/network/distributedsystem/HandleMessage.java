@@ -20,7 +20,7 @@ public class HandleMessage implements Runnable{
     public void run() {
         try {
             InputStream inputStream = this.socketHandler.getSocket().getInputStream();
-            BufferedReader buffer = null;
+            BufferedReader buffer;
             while(socketHandler.isConnected()){
                 buffer = new BufferedReader(new InputStreamReader(inputStream));
                 if(buffer.ready()){
@@ -32,8 +32,13 @@ public class HandleMessage implements Runnable{
             e.printStackTrace();
         }
     }
-
     public String getMessage() {
         return message;
+    }
+    public String getHostName(){
+        return this.socketHandler.getHostName();
+    }
+    public int getHostPort(){
+        return this.socketHandler.getHostPort();
     }
 }
