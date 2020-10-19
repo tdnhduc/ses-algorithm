@@ -19,6 +19,7 @@ public class HandleMessage implements Runnable{
     @Override
     public void run() {
         try {
+            LOGGER.info("Waiting for your message :cry: :cry:");
             InputStream inputStream = this.socketHandler.getSocket().getInputStream();
             BufferedReader buffer;
             while(socketHandler.isConnected()){

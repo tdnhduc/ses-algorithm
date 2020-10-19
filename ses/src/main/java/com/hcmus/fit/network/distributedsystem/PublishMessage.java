@@ -58,21 +58,26 @@ public class PublishMessage implements Runnable{
                 } else{
                     while (currConnections >= minConnectionReadyToWrite){
                         for(Map.Entry<String, SocketHandler> entry : socketHandlerMap.entrySet()){
-                            InputStream inputStream = entry.getValue().getSocket().getInputStream();
-                            OutputStream outputStream = entry.getValue().getSocket().getOutputStream();
-                            long time = System.currentTimeMillis();
-                            Message message = new Message("HTTP/1.1 200 OK\n\nProcessId: " +
-                                     processID + " - " +
-                                    time +
-                                    "");
-                            outputStream.write(message.getText().getBytes());
-                            LOGGER.info("Request processed: " + time);
-                            Thread.sleep(1500L);
+                            try {
+                                OutputStream outputStream = entry.getValue().getSocket().getOutputStream();
+                                long time = System.currentTimeMillis();
+                                Message message = new Message("Message at: " + time);
+                                outputStream.write(message.getMessage().getBytes());
+                                LOGGER.info("Request message: {}", message.getMessage() );
+                                Thread.sleep(3500L);
+                            } catch (IOException e){
+                                currConnections--;
+                                socketHandlerMap.remove(entry);
+                                LOGGER.warn("Client {}:{} is disconnected :cry::cry:", entry.getValue().getHostName(), entry.getValue().getHostPort());
+                                if(currConnections < minConnectionReadyToWrite){
+                                    LOGGER.error("Oops!!!, there is enough connection to write, waiting...");
+                                }
+                            }
                         }
                     }
                 }
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
