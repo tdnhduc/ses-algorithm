@@ -1,11 +1,10 @@
-package com.hcmus.fit.network.distributedsystem.utils;
+package com.hcmus.fit.network.distributedsystem.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;

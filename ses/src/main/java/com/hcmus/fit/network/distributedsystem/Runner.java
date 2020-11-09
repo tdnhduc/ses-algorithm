@@ -1,8 +1,9 @@
 package com.hcmus.fit.network.distributedsystem;
 
+import com.hcmus.fit.network.distributedsystem.config.HandleConfig;
+import com.hcmus.fit.network.distributedsystem.message.Message;
 import com.hcmus.fit.network.distributedsystem.utils.FormatKeyWorker;
-import com.hcmus.fit.network.distributedsystem.utils.HandleConfig;
-import com.hcmus.fit.network.distributedsystem.utils.SocketHandler;
+import com.hcmus.fit.network.distributedsystem.connection.SocketHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,7 +19,6 @@ public class Runner {
      * workerMap for mapping ip:port with worker
      * eg: 127.0.0.1:8080 <-> worker1
      */
-    public static Map<String, PublishMessage> publishMessageMap = new HashMap<>();
     public static Map<String, HandleMessage>  handleMessageMap = new HashMap<>();
 
     public static void main(String args[]) throws IOException {
@@ -26,8 +26,14 @@ public class Runner {
         String processID = HandleConfig.getInstance().getProcessID();
         int minConnections = HandleConfig.getInstance().getMinConnections();
         List<String> processes = HandleConfig.getInstance().getListPort();
-
-        ServerSocket serverSocket = new ServerSocket(port);
+        Message message = new Message(minConnections, processID);
+        ServerSocket serverSocket;
+        if(args.length == 0){
+            serverSocket = new ServerSocket(port);
+        }else{
+            serverSocket = new ServerSocket(Integer.valueOf(args[0]));
+            processID = args[1];
+        }
 
         if(serverSocket != null){
             LOGGER.info("Server id = {} started at port: {}", processID, port);
@@ -42,13 +48,14 @@ public class Runner {
 
                 LOGGER.info("Client {}:{} connected, :grinning::grinning::grinning:", hostClient, portClient);
 
-                HandleMessage handleMessage = new HandleMessage(socketHandler);
+                HandleMessage handleMessage = new HandleMessage(socketHandler, message);
 
                 String key = FormatKeyWorker.formatKey(handleMessage.getHostName(), handleMessage.getHostPort());
 
                 handleMessageMap.putIfAbsent(key, handleMessage);
 
                 Thread handle = new Thread(handleMessage);
+
                 handle.start();
             }
         } else{

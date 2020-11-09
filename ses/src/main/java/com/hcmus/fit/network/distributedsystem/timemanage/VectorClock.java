@@ -1,4 +1,6 @@
-package com.hcmus.fit.network.distributedsystem.utils;
+package com.hcmus.fit.network.distributedsystem.timemanage;
+
+import java.util.Arrays;
 
 public class VectorClock {
     public static boolean compareLessThan(int[] timeStamp1, int[] timeStamp2){
@@ -27,5 +29,11 @@ public class VectorClock {
             }
         }
         return maxArray;
+    }
+
+    public static String toString(TimeStamp vectorClock)
+    {
+        return Arrays.toString(vectorClock.getTimestampProcess());
+
     }
 }

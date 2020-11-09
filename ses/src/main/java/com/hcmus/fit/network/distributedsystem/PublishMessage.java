@@ -1,13 +1,14 @@
 package com.hcmus.fit.network.distributedsystem;
 
-import com.hcmus.fit.network.distributedsystem.utils.Message;
-import com.hcmus.fit.network.distributedsystem.utils.SocketHandler;
+import com.hcmus.fit.network.distributedsystem.message.Message;
+import com.hcmus.fit.network.distributedsystem.connection.SocketHandler;
+import com.hcmus.fit.network.distributedsystem.timemanage.TimeStamp;
+import com.hcmus.fit.network.distributedsystem.timemanage.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.util.*;
 
@@ -19,18 +20,22 @@ public class PublishMessage implements Runnable{
     private Map<String, String> rawEndpoints = new HashMap<>();
     private Map<String, SocketHandler> socketHandlerMap = new HashMap();
     private int minConnectionReadyToWrite;
+    private ObjectOutputStream oos;
     private int currConnections = 0;
     private String processID;
+    private Message message;
+
     public PublishMessage(String processID, List<String> processes, int minConnectionReadyToWrite){
         this.minConnectionReadyToWrite = minConnectionReadyToWrite;
         this.processID = processID;
         this.moveToRawEndPoints(processes);
     }
     private void moveToRawEndPoints(List<String> processes){
+        rawEndpoints.clear();
         for(String process : processes){
             List<String> info = Arrays.asList(process.split(":"));
             rawEndpoints.putIfAbsent(info.get(0), info.get(1) + ":" + info.get(2));
-
+            LOGGER.info("Have {} raw end points", rawEndpoints.size());
         }
     }
     private void retryConnectMultiServers(){
@@ -40,11 +45,12 @@ public class PublishMessage implements Runnable{
             String host = address.split(":")[0];
             int port = Integer.valueOf(address.split(":")[1]);
             SocketHandler handler = new SocketHandler(host, port);
-            if(handler.getSocket() != null){
+            if(handler.getSocket() != null) {
                 socketHandlerMap.put(entry.getKey(), handler);
-                this.currConnections ++;
+                this.currConnections++;
             }
         }
+        this.message = new Message(this.currConnections, processID);
         LOGGER.info("Number server available after retry = {}", currConnections);
     }
     @Override
@@ -59,11 +65,9 @@ public class PublishMessage implements Runnable{
                     while (currConnections >= minConnectionReadyToWrite){
                         for(Map.Entry<String, SocketHandler> entry : socketHandlerMap.entrySet()){
                             try {
-                                OutputStream outputStream = entry.getValue().getSocket().getOutputStream();
-                                long time = System.currentTimeMillis();
-                                Message message = new Message("Message at: " + time);
-                                outputStream.write(message.getMessage().getBytes());
-                                LOGGER.info("Request message: {}", message.getMessage() );
+                                ObjectOutputStream outputStream = entry.getValue().getObjectOutputStream();
+                                sendMessage(outputStream, message);
+                                LOGGER.info("[SEND][{}] Increase local timestamp, message with timestamp: {}", processID, this.message.getTimeStamp().getTimestampProcess());
                                 Thread.sleep(3500L);
                             } catch (IOException e){
                                 currConnections--;
@@ -81,6 +85,16 @@ public class PublishMessage implements Runnable{
             e.printStackTrace();
         }
     }
+
+    private synchronized void sendMessage(ObjectOutputStream oos, Message msg) throws IOException {
+        if(msg.getBuffers() == null){
+            msg.setBuffers(Arrays.asList(msg.getTimeStamp().getTimeStamp()));
+        }
+        msg.getTimeStamp().increaseTimeStamp();
+        oos.writeObject(msg);
+        oos.reset();
+    }
+
     public InetAddress getIP(String processID){
         SocketHandler handler = socketHandlerMap.get(processID);
         return handler.getSocket().getLocalAddress();
