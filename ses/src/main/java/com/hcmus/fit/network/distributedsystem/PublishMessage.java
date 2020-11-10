@@ -15,7 +15,7 @@ import java.util.*;
 /**
  * This class for communicate with each client
  */
-public class PublishMessage implements Runnable{
+public class PublishMessage implements Runnable {
     private static final Logger LOGGER = LoggerFactory.getLogger(PublishMessage.class);
     private Map<String, String> rawEndpoints = new HashMap<>();
     private Map<String, SocketHandler> socketHandlerMap = new HashMap();
@@ -25,27 +25,30 @@ public class PublishMessage implements Runnable{
     private String processID;
     private Message message;
 
-    public PublishMessage(String processID, List<String> processes, int minConnectionReadyToWrite){
+    public PublishMessage(String processID, List<String> processes, int minConnectionReadyToWrite) {
         this.minConnectionReadyToWrite = minConnectionReadyToWrite;
         this.processID = processID;
         this.moveToRawEndPoints(processes);
     }
-    private void moveToRawEndPoints(List<String> processes){
+
+    private void moveToRawEndPoints(List<String> processes) {
         rawEndpoints.clear();
-        for(String process : processes){
+        for (String process : processes) {
             List<String> info = Arrays.asList(process.split(":"));
             rawEndpoints.putIfAbsent(info.get(0), info.get(1) + ":" + info.get(2));
             LOGGER.info("Have {} raw end points", rawEndpoints.size());
         }
     }
-    private void retryConnectMultiServers(){
+
+    private void retryConnectMultiServers() throws InterruptedException {
+        Thread.sleep(3500L);
         this.currConnections = 0;
-        for(Map.Entry<String, String> entry : rawEndpoints.entrySet()){
+        for (Map.Entry<String, String> entry : rawEndpoints.entrySet()) {
             String address = entry.getValue();
             String host = address.split(":")[0];
             int port = Integer.valueOf(address.split(":")[1]);
             SocketHandler handler = new SocketHandler(host, port);
-            if(handler.getSocket() != null) {
+            if (handler.getSocket() != null) {
                 socketHandlerMap.put(entry.getKey(), handler);
                 this.currConnections++;
             }
@@ -53,32 +56,34 @@ public class PublishMessage implements Runnable{
         this.message = new Message(this.currConnections, processID);
         LOGGER.info("Number server available after retry = {}", currConnections);
     }
+
     @Override
     public void run() {
         try {
-            while(true){
-                if(currConnections == 0){
+            while (true) {
+                if (currConnections == 0) {
                     LOGGER.warn("No connection available, refresh connect now!!!");
                     retryConnectMultiServers();
-                    Thread.sleep(1500L);
-                } else{
-                    while (currConnections >= minConnectionReadyToWrite){
-                        for(Map.Entry<String, SocketHandler> entry : socketHandlerMap.entrySet()){
-                            try {
-                                ObjectOutputStream outputStream = entry.getValue().getObjectOutputStream();
-                                sendMessage(outputStream, message);
-                                LOGGER.info("[SEND][{}] Increase local timestamp, message with timestamp: {}", processID, this.message.getTimeStamp().getTimestampProcess());
-                                Thread.sleep(3500L);
-                            } catch (IOException e){
-                                currConnections--;
-                                socketHandlerMap.remove(entry);
-                                LOGGER.warn("Client {}:{} is disconnected :cry::cry:", entry.getValue().getHostName(), entry.getValue().getHostPort());
-                                if(currConnections < minConnectionReadyToWrite){
-                                    LOGGER.error("Oops!!!, there is enough connection to write, waiting...");
-                                }
+                    Thread.sleep(2500L);
+                } else {
+                    while (currConnections >= minConnectionReadyToWrite) {
+                        // pick random destination
+                        String randKey = getRandKey(socketHandlerMap.keySet());
+                        try {
+                            ObjectOutputStream outputStream = socketHandlerMap.get(randKey).getObjectOutputStream();
+                            sendMessage(outputStream, message);
+                            LOGGER.info("Send to [{}] Increase local timestamp, message with timestamp: {}", randKey, this.message.getTimeStamp().getTimestampProcess());
+                            Thread.sleep(3500L);
+                        } catch (IOException e) {
+                            currConnections--;
+                            socketHandlerMap.remove(randKey);
+                            LOGGER.warn("Client {}:{} is disconnected :cry::cry:", socketHandlerMap.get(randKey).getHostName(), socketHandlerMap.get(randKey).getHostPort());
+                            if (currConnections < minConnectionReadyToWrite) {
+                                LOGGER.error("Oops!!!, there is enough connection to write, waiting...");
                             }
                         }
                     }
+                    retryConnectMultiServers();
                 }
             }
         } catch (InterruptedException e) {
@@ -87,7 +92,7 @@ public class PublishMessage implements Runnable{
     }
 
     private synchronized void sendMessage(ObjectOutputStream oos, Message msg) throws IOException {
-        if(msg.getBuffers() == null){
+        if (msg.getBuffers() == null) {
             msg.setBuffers(Arrays.asList(msg.getTimeStamp().getTimeStamp()));
         }
         msg.getTimeStamp().increaseTimeStamp();
@@ -95,7 +100,7 @@ public class PublishMessage implements Runnable{
         oos.reset();
     }
 
-    public InetAddress getIP(String processID){
+    public InetAddress getIP(String processID) {
         SocketHandler handler = socketHandlerMap.get(processID);
         return handler.getSocket().getLocalAddress();
     }
@@ -103,5 +108,12 @@ public class PublishMessage implements Runnable{
     public int getHostPort(String processID) {
         SocketHandler handler = socketHandlerMap.get(processID);
         return handler.getSocket().getPort();
+    }
+
+    private String getRandKey(Set<String> keys) {
+        Random random = new Random();
+        int randIndex = random.nextInt(keys.size());
+        String[] listKey = new String[keys.size()];
+        return keys.toArray(listKey)[randIndex];
     }
 }

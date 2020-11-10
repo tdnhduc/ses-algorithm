@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,14 +27,10 @@ public class Runner {
         String processID = HandleConfig.getInstance().getProcessID();
         int minConnections = HandleConfig.getInstance().getMinConnections();
         List<String> processes = HandleConfig.getInstance().getListPort();
-        Message message = new Message(minConnections, processID);
+        Message messageAccept = new Message(minConnections, processID);
+        Message messagePending = new Message(minConnections, processID);
         ServerSocket serverSocket;
-        if(args.length == 0){
-            serverSocket = new ServerSocket(port);
-        }else{
-            serverSocket = new ServerSocket(Integer.valueOf(args[0]));
-            processID = args[1];
-        }
+        serverSocket = new ServerSocket(port);
 
         if(serverSocket != null){
             LOGGER.info("Server id = {} started at port: {}", processID, port);
@@ -48,7 +45,7 @@ public class Runner {
 
                 LOGGER.info("Client {}:{} connected, :grinning::grinning::grinning:", hostClient, portClient);
 
-                HandleMessage handleMessage = new HandleMessage(socketHandler, message);
+                HandleMessage handleMessage = new HandleMessage(socketHandler, messageAccept, messagePending);
 
                 String key = FormatKeyWorker.formatKey(handleMessage.getHostName(), handleMessage.getHostPort());
 

@@ -10,17 +10,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.Arrays;
-import java.util.Iterator;
 
 public class HandleMessage implements Runnable{
     private static final Logger LOGGER = LoggerFactory.getLogger(HandleMessage.class);
     public SocketHandler socketHandler;
-    private Message message;
+    private Message messageAccept;
+    private Message messagePending;
     private ObjectInputStream oos;
-    public HandleMessage(SocketHandler socketHandler, Message message) throws IOException {
+    public HandleMessage(SocketHandler socketHandler, Message messageAccept, Message messagePending) throws IOException {
         this.socketHandler = socketHandler;
-        this.message = message;
+        this.messageAccept = messageAccept;
+        this.messagePending = messagePending;
         this.oos = new ObjectInputStream(socketHandler.getSocket().getInputStream());
     }
     @Override
@@ -40,25 +40,29 @@ public class HandleMessage implements Runnable{
     }
 
     private synchronized void handleMessage(Message message){
-        this.message.getTimeStamp().increaseTimeStamp();
-        if(Buffer.deliveryCondition(message.getBuffers(), this.message.getTimeStamp().getTimeStamp())){
+        this.messageAccept.getTimeStamp().increaseTimeStamp();
+        if(Buffer.deliveryCondition(message.getBuffers(), this.messageAccept.getTimeStamp().getTimeStamp())){
             LOGGER.info("[ACCEPT] message from [{}] have been accept: {}", message.getPid(), VectorClock.toString(message.getTimeStamp()));
             LOGGER.info("[ACCEPT] message from [{}] have buffer", message.getPid());
             for(Tuple pid : message.getBuffers()){
                 LOGGER.info("Pid [{}], timestamp {}", pid.getPid(), pid.getTimestamp());
             }
-            this.message.setBuffers(message.getBuffers());
+            this.messageAccept.setBuffers(message.getBuffers());
         } else{
-            LOGGER.info("Current Vector Clock: {}", VectorClock.toString(this.message.getTimeStamp()));
+            LOGGER.info("Current Vector Clock: {}", VectorClock.toString(this.messageAccept.getTimeStamp()));
             LOGGER.info("[BUFFER] message: {}", VectorClock.toString(message.getTimeStamp()));
             //this.message.add(m);
-            this.message.setBuffers(message.getBuffers());
+            this.messagePending.setBuffers(message.getBuffers());
         }
         //LOGGER.info("[RECEIVED] Increase local timestamp, message from [{}] with timestamp:  {}", message.getPid(), message.getTimeStamp().getTimestampProcess());
     }
 
-    public Message getMessage() {
-        return message;
+    public Message getMessageAccept() {
+        return messageAccept;
+    }
+
+    public Message getMessagePending() {
+        return messagePending;
     }
 
     public String getHostName(){
